@@ -27,7 +27,7 @@ function setTextBoxState(isPrivate, hasPrivateCode) {
         noteInput.readOnly = false;
         noteTitle.readOnly = false;
         noteInput.style.pointerEvents = 'auto';
-        noteInput.style.pointerEvents = 'auto';
+        noteTitle.style.pointerEvents = 'auto';
     }
 }
 
@@ -71,29 +71,55 @@ function displayNotes(notes, hasPrivateCode = false) {
 }
 
 function displayFiles(files, hasPrivateCode = false) {
-    const container = document.getElementById('fileList');
+    const container = document.getElementById('filesContainer');
     container.innerHTML = '';
     
     files.forEach(file => {
         const fileElement = document.createElement('div');
-        fileElement.className = `file-item ${file.isLocked ? 'blurred-content' : ''}`;
+        fileElement.className = 'file';
         
-        fileElement.innerHTML = `
-            <span class="filename">${file.filename}</span>
-            <div class="button-group">
-                <button onclick="downloadFile('${file.fileId}', '${file.privateCode || ''}')" ${file.isLocked ? 'disabled' : ''} title="${file.isLocked ? 'Enter padlock code to download' : ''}">Download</button>
-                <button onclick="deleteFile('${file.fileId}', '${file.privateCode || ''}')" ${file.isLocked ? 'disabled' : ''} title="${file.isLocked ? 'Enter padlock code to delete' : ''}">Delete</button>
-            </div>
-            ${file.isLocked ? '<div class="lock-overlay"><span class="lock-icon">🔒</span><p>Enter padlock code to access</p></div>' : ''}
-        `;
-
+        const nameElement = document.createElement('span');
+        nameElement.className = 'file-name';
+        if (file.isLocked) {
+            nameElement.classList.add('blurred');
+            nameElement.style.pointerEvents = 'none';
+            const lockIcon = document.createElement('span');
+            lockIcon.className = 'lock-icon';
+            lockIcon.innerHTML = '🔒';
+            nameElement.appendChild(lockIcon);
+        }
+        nameElement.textContent = file.filename;
+        
+        const downloadButton = document.createElement('button');
+        downloadButton.textContent = 'Download';
+        downloadButton.onclick = () => downloadFile(file.fileId, file.privateCode);
+        if (file.isLocked) {
+            downloadButton.disabled = true;
+            downloadButton.title = 'Enter private code to download';
+        }
+        
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = 'Delete';
+        deleteButton.className = 'delete-btn';
+        deleteButton.onclick = () => deleteFile(file.fileId, file.privateCode);
+        if (file.isLocked) {
+            deleteButton.disabled = true;
+            deleteButton.title = 'Enter private code to delete';
+        }
+        
+        fileElement.appendChild(nameElement);
+        fileElement.appendChild(downloadButton);
+        if (file.userId === currentUserId) {
+            fileElement.appendChild(deleteButton);
+        }
+        
         container.appendChild(fileElement);
     });
 }
 
 async function downloadFile(fileId, privateCode = '') {
     try {
-        const response = await fetch(`/api/download/${fileId}?privateCode=${privateCode || currentPadlockCode}`);
+        const response = await fetch(`/api/download/${fileId}?privateCode=${privateCode || currentPrivateCode}`);
         if (response.ok) {
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
@@ -122,8 +148,8 @@ async function deleteFile(fileId, privateCode = '') {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                userId: currentAccessCode,
-                privateCode: privateCode || currentPadlockCode
+                userId: currentUserId,
+                privateCode: privateCode || currentPrivateCode
             })
         });
 
@@ -132,7 +158,7 @@ async function deleteFile(fileId, privateCode = '') {
             throw new Error(error.message || 'Failed to delete file');
         }
 
-        await loadUserContent();
+        await fetchUserContent(currentUserId, currentPrivateCode);
         showMessage('File deleted successfully', 'success');
     } catch (error) {
         console.error('Delete error:', error);
@@ -342,99 +368,4 @@ function setupButtonLayout() {
 }
 
 // Call setupButtonLayout after DOM is loaded
-document.addEventListener('DOMContentLoaded', setupButtonLayout);
-
-document.addEventListener('DOMContentLoaded', () => {
-    const accessCodeInput = document.getElementById('userIdInput');
-    const privateCodeInput = document.getElementById('privateCodeInput');
-    const loginButton = document.getElementById('loginButton');
-    const filePage = document.getElementById('filePage');
-    const homePage = document.getElementById('homePage');
-    const userIdDisplay = document.getElementById('userId');
-    const noteInput = document.getElementById('textInput');
-    const noteTitle = document.getElementById('noteTitle');
-    const saveNoteAsPrivateCheckbox = document.getElementById('saveNoteAsPrivate');
-    const saveAsPrivateCheckbox = document.getElementById('saveAsPrivate');
-    const fileInput = document.getElementById('fileInput');
-    const fileList = document.getElementById('fileList');
-    const messageContainer = document.getElementById('messageContainer');
-    const saveBtn = document.getElementById('saveTextButton');
-    const refreshBtn = document.getElementById('refresh-btn');
-    const padlockBtn = document.getElementById('private-btn');
-    const saveCloseBtn = document.getElementById('save-close-btn');
-    const closeBtn = document.getElementById('close-btn');
-    const logoutButton = document.getElementById('logoutButton');
-
-    let currentAccessCode = '';
-    let currentPadlockCode = '';
-
-    loginButton.addEventListener('click', handleLogin);
-    accessCodeInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleLogin();
-    });
-    privateCodeInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleLogin();
-    });
-
-    function handleLogin() {
-        const accessCode = accessCodeInput.value.trim();
-        const padlockCode = privateCodeInput.value.trim();
-
-        if (!accessCode) {
-            showMessage('Please enter an access code', 'error');
-            return;
-        }
-
-        currentAccessCode = accessCode;
-        currentPadlockCode = padlockCode;
-
-        userIdDisplay.textContent = `Access Code: ${currentAccessCode}`;
-        homePage.classList.add('hidden');
-        filePage.classList.remove('hidden');
-        loadUserContent();
-    }
-
-    function loadUserContent() {
-        fetch(`/api/notes/user/${currentAccessCode}?privateCode=${currentPadlockCode}`)
-            .then(response => response.json())
-            .then(notes => {
-                displayNotes(notes);
-            })
-            .catch(error => {
-                console.error('Error loading notes:', error);
-                showMessage('Error loading notes.', 'error');
-            });
-
-        fetch(`/api/files/user/${currentAccessCode}?privateCode=${currentPadlockCode}`)
-            .then(response => response.json())
-            .then(files => {
-                displayFiles(files);
-            })
-            .catch(error => {
-                console.error('Error loading files:', error);
-                showMessage('Error loading files.', 'error');
-            });
-    }
-
-    function showMessage(message, type) {
-        messageContainer.textContent = message;
-        messageContainer.className = `message ${type}`;
-        messageContainer.style.display = 'block';
-        setTimeout(() => {
-            messageContainer.style.display = 'none';
-        }, 3000);
-    }
-
-    logoutButton.addEventListener('click', () => {
-        currentAccessCode = '';
-        currentPadlockCode = '';
-        accessCodeInput.value = '';
-        privateCodeInput.value = '';
-        noteInput.value = '';
-        noteTitle.value = '';
-        fileList.innerHTML = '';
-        messageContainer.style.display = 'none';
-        homePage.classList.remove('hidden');
-        filePage.classList.add('hidden');
-    });
-}); 
+document.addEventListener('DOMContentLoaded', setupButtonLayout); 
