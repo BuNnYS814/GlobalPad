@@ -34,10 +34,10 @@ function setTextBoxState(isPrivate, hasPrivateCode) {
 function displayNotes(notes, hasPrivateCode = false) {
     const container = document.getElementById('notesContainer');
     container.innerHTML = '';
-    let hasPrivateNotes = false;
-    
+    // `hasPrivateNotes` variable might not be strictly needed if `isLocked` is used from server response
+    // let hasPrivateNotes = false; // Keep this variable if used elsewhere
+
     notes.forEach(note => {
-        if (note.isPrivate) hasPrivateNotes = true;
         const noteElement = document.createElement('div');
         noteElement.className = 'note';
         
@@ -45,17 +45,24 @@ function displayNotes(notes, hasPrivateCode = false) {
         titleElement.textContent = note.title;
         
         const contentElement = document.createElement('p');
+        // Check note.isLocked from server response
         if (note.isLocked) {
-            contentElement.classList.add('blurred');
-            contentElement.textContent = 'Private content';
-            contentElement.style.pointerEvents = 'none';
+            noteElement.classList.add('blurred-content'); // Apply blurring to the entire note item
+            contentElement.textContent = 'Padlocked content'; // Display blurred message
+            contentElement.style.pointerEvents = 'none'; // Disable pointer events
             
             const lockIcon = document.createElement('span');
             lockIcon.className = 'lock-icon';
             lockIcon.innerHTML = '🔒';
             titleElement.appendChild(lockIcon);
+
+            // Add click listener to show modal for locked notes
+            noteElement.addEventListener('click', () => {
+                padlockModal.style.display = 'flex'; // Show modal on click
+            });
+
         } else {
-            contentElement.textContent = note.content;
+            contentElement.textContent = note.content; // Display actual content
         }
         
         const dateElement = document.createElement('small');
@@ -67,7 +74,9 @@ function displayNotes(notes, hasPrivateCode = false) {
         container.appendChild(noteElement);
     });
 
-    setTextBoxState(hasPrivateNotes, hasPrivateCode);
+    // The setTextBoxState function might need to be re-evaluated based on the new modal flow
+    // For now, ensure it doesn't interfere with the modal.
+    // setTextBoxState(hasPrivateNotes, hasPrivateCode); // This line might need adjustment or removal
 }
 
 function displayFiles(files, hasPrivateCode = false) {
@@ -80,33 +89,43 @@ function displayFiles(files, hasPrivateCode = false) {
         
         const nameElement = document.createElement('span');
         nameElement.className = 'file-name';
+
+        // Check file.isLocked from server response
         if (file.isLocked) {
-            nameElement.classList.add('blurred');
-            nameElement.style.pointerEvents = 'none';
-            const lockIcon = document.createElement('span');
-            lockIcon.className = 'lock-icon';
-            lockIcon.innerHTML = '🔒';
-            nameElement.appendChild(lockIcon);
+            fileElement.classList.add('blurred-content'); // Apply blurring to the entire file item
+            nameElement.innerHTML = `🔒 ${file.filename} (Padlocked)`; // Display padlocked status
+
+            // Add click listener to show modal for locked files
+            fileElement.addEventListener('click', () => {
+                padlockModal.style.display = 'flex'; // Show modal on click
+            });
+
+        } else {
+            nameElement.textContent = file.filename; // Display actual filename
         }
-        nameElement.textContent = file.filename;
-        
+
         const downloadButton = document.createElement('button');
         downloadButton.textContent = 'Download';
         downloadButton.onclick = () => downloadFile(file.fileId, file.privateCode);
-        if (file.isLocked) {
-            downloadButton.disabled = true;
-            downloadButton.title = 'Enter private code to download';
-        }
-        
+
         const deleteButton = document.createElement('button');
         deleteButton.textContent = 'Delete';
         deleteButton.className = 'delete-btn';
         deleteButton.onclick = () => deleteFile(file.fileId, file.privateCode);
+
+        // Disable buttons if the file is locked
         if (file.isLocked) {
+            downloadButton.disabled = true;
             deleteButton.disabled = true;
-            deleteButton.title = 'Enter private code to delete';
+            downloadButton.title = 'Enter padlock code to download';
+            deleteButton.title = 'Enter padlock code to delete';
+        } else {
+            downloadButton.disabled = false; // Ensure enabled if not locked
+            deleteButton.disabled = false; // Ensure enabled if not locked
+            downloadButton.title = '';
+            deleteButton.title = '';
         }
-        
+
         fileElement.appendChild(nameElement);
         fileElement.appendChild(downloadButton);
         if (file.userId === currentUserId) {

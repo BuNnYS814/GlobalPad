@@ -333,16 +333,14 @@
     <h1>GlobalPad</h1>
     <p class="subtitle">Simple and secure file sharing</p>
 
-    <div class="container">
-        <h2 class="access-title">Access Your Notes</h2>
-        <p class="access-subtitle">Enter an access code to manage your notes and files</p>
+    <div id="accessPage" class="container">
+        <h2 class="access-title">Access Your Content</h2>
+        <p class="access-subtitle">Enter your unique access code to view your notes and files.</p>
         <div class="input-group">
-            <input type="text" id="userIdInput" placeholder="Enter access code" autocomplete="off">
-            <button class="primary-button" id="loginButton">Open</button>
+            <input type="text" id="accessCode" placeholder="Enter your access code" autocomplete="off">
         </div>
-        <p class="help-text">
-            Use any code you want. Just remember it to access your notes later!
-        </p>
+        <button id="accessBtn" class="btn">Access</button>
+        <p class="note">No access code? One will be generated for you upon saving your first note or file.</p>
     </div>
 
     <div class="editor-container" id="editor-container">
@@ -390,13 +388,12 @@
     </div>
 
     <!-- Padlock Modal -->
-    <div id="padlockModal" class="modal">
+    <div id="padlockModal" class="modal" style="display: none;">
         <div class="modal-content">
             <span class="close-button">&times;</span>
             <h2>Enter Padlock Code</h2>
-            <p>Please enter the padlock code to access this item.</p>
-            <input type="password" id="padlockCodeInput" placeholder="Padlock Code">
-            <button id="submitPadlockCode">Unlock</button>
+            <input type="password" id="padlockCodeInput" placeholder="Enter padlock code" autocomplete="off">
+            <button id="submitPadlockCode" class="btn">Unlock</button>
         </div>
     </div>
 
