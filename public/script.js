@@ -6,12 +6,19 @@ let isPrivate = false;
 let padlockModal;
 
 function clearContent() {
-    document.getElementById('notesContainer').innerHTML = '';
-    document.getElementById('filesContainer').innerHTML = '';
-    document.getElementById('noteInput').value = '';
-    document.getElementById('noteTitle').value = '';
-    document.getElementById('saveNoteAsPrivate').checked = false;
-    document.getElementById('saveAsPrivate').checked = false;
+    const notesContainer = document.getElementById('notesContainer');
+    const filesContainer = document.getElementById('filesContainer');
+    const noteInput = document.getElementById('noteInput');
+    const noteTitle = document.getElementById('noteTitle');
+    const saveNoteAsPrivate = document.getElementById('saveNoteAsPrivate');
+    const saveAsPrivate = document.getElementById('saveAsPrivate');
+
+    if (notesContainer) notesContainer.innerHTML = '';
+    if (filesContainer) filesContainer.innerHTML = '';
+    if (noteInput) noteInput.value = '';
+    if (noteTitle) noteTitle.value = '';
+    if (saveNoteAsPrivate) saveNoteAsPrivate.checked = false;
+    if (saveAsPrivate) saveAsPrivate.checked = false;
 }
 
 function setTextBoxState(isPrivate, hasPrivateCode) {
@@ -191,7 +198,7 @@ async function deleteFile(fileId, privateCode = '') {
 
 async function fetchUserContent(userId, privateCode = '') {
     try {
-        clearContent();
+        // clearContent(); // REMOVED: clearContent will now be called after editor is visible
         currentPrivateCode = privateCode;
         currentUserId = userId;
         
@@ -256,10 +263,11 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Access button clicked!');
             const accessCode = accessCodeInput.value.trim();
             if (accessCode) {
+                if (editorContainer) editorContainer.style.display = 'block'; // Make editor visible FIRST
+                if (accessPage) accessPage.style.display = 'none'; // Hide access page
+                clearContent(); // Now call clearContent after editor is visible
                 console.log('Fetching content for access code:', accessCode);
                 await fetchUserContent(accessCode);
-                if (editorContainer) editorContainer.style.display = 'block';
-                if (accessPage) accessPage.style.display = 'none';
                 console.log('UI updated: accessPage hidden, editor visible.');
             } else {
                 showStatus('Please enter an access code', true);
@@ -304,94 +312,95 @@ document.addEventListener('DOMContentLoaded', () => {
         if (accessBtn) accessBtn.click(); // Programmatically click the button to trigger access
     }
 
-    // Existing file upload and note saving logic (ensure these are still here and correct)
-    // document.getElementById('fileForm').onsubmit = async function(e) { ... };
-    // document.getElementById('noteForm').onsubmit = async function(e) { ... };
+    // Move file upload and note saving logic inside DOMContentLoaded and add checks
+    const fileForm = document.getElementById('fileForm');
+    if (fileForm) {
+        fileForm.onsubmit = async function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            formData.append('userId', currentUserId);
+            
+            const isPrivateChecked = document.getElementById('saveAsPrivate').checked; // Renamed to avoid conflict
+            if (isPrivateChecked) {
+                const privateCodePrompt = prompt('Enter a padlock code for this file:');
+                if (!privateCodePrompt) return;
+                formData.append('isPrivate', 'true');
+                formData.append('privateCode', privateCodePrompt);
+            }
+            
+            try {
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Upload failed');
+                }
+                
+                showStatus('File uploaded successfully!', false);
+                setTimeout(() => {
+                    fetchUserContent(currentUserId, currentPrivateCode);
+                }, 1000);
+            } catch (error) {
+                console.error('Upload error:', error);
+                showStatus(error.message || 'Error uploading file', true);
+            }
+        };
+    }
+
+    const noteForm = document.getElementById('noteForm');
+    if (noteForm) {
+        noteForm.onsubmit = async function(e) {
+            e.preventDefault();
+            const title = document.getElementById('noteTitle').value;
+            const content = document.getElementById('noteInput').value;
+            
+            if (!title || !content) {
+                showStatus('Please enter both title and content', true);
+                return;
+            }
+            
+            const isNotePrivate = document.getElementById('saveNoteAsPrivate').checked; // Renamed to avoid conflict
+            let privateCodeForNote = '';
+            
+            if (isNotePrivate) {
+                privateCodeForNote = prompt('Enter a padlock code for this note:');
+                if (!privateCodeForNote) return;
+            }
+            
+            try {
+                const response = await fetch('/api/note', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userId: currentUserId,
+                        title: title,
+                        content: content,
+                        isPrivate: isNotePrivate,
+                        privateCode: privateCodeForNote
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Failed to save note');
+                }
+
+                showStatus('Note saved successfully!', false);
+                setTimeout(() => {
+                    fetchUserContent(currentUserId, currentPrivateCode);
+                }, 1000);
+            } catch (error) {
+                console.error('Save note error:', error);
+                showStatus(error.message || 'Error saving note', true);
+            }
+        };
+    }
 });
-
-// Update file upload to handle private files (ensure element IDs are correct)
-document.getElementById('fileForm').onsubmit = async function(e) {
-    e.preventDefault();
-    const formData = new FormData(this);
-    formData.append('userId', currentUserId);
-    
-    const isPrivateChecked = document.getElementById('saveAsPrivate').checked; // Renamed to avoid conflict
-    if (isPrivateChecked) {
-        const privateCodePrompt = prompt('Enter a padlock code for this file:');
-        if (!privateCodePrompt) return;
-        formData.append('isPrivate', 'true');
-        formData.append('privateCode', privateCodePrompt);
-    }
-    
-    try {
-        const response = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData
-        });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Upload failed');
-        }
-        
-        showStatus('File uploaded successfully!', false);
-        setTimeout(() => {
-            fetchUserContent(currentUserId, currentPrivateCode);
-        }, 1000);
-    } catch (error) {
-        console.error('Upload error:', error);
-        showStatus(error.message || 'Error uploading file', true);
-    }
-};
-
-// Update note saving to handle private notes (ensure element IDs are correct)
-document.getElementById('noteForm').onsubmit = async function(e) {
-    e.preventDefault();
-    const title = document.getElementById('noteTitle').value;
-    const content = document.getElementById('noteInput').value;
-    
-    if (!title || !content) {
-        showStatus('Please enter both title and content', true);
-        return;
-    }
-    
-    const isNotePrivate = document.getElementById('saveNoteAsPrivate').checked; // Renamed to avoid conflict
-    let privateCodeForNote = '';
-    
-    if (isNotePrivate) {
-        privateCodeForNote = prompt('Enter a padlock code for this note:');
-        if (!privateCodeForNote) return;
-    }
-    
-    try {
-        const response = await fetch('/api/note', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                userId: currentUserId,
-                title: title,
-                content: content,
-                isPrivate: isNotePrivate,
-                privateCode: privateCodeForNote
-            })
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to save note');
-        }
-
-        showStatus('Note saved successfully!', false);
-        setTimeout(() => {
-            fetchUserContent(currentUserId, currentPrivateCode);
-        }, 1000);
-    } catch (error) {
-        console.error('Save note error:', error);
-        showStatus(error.message || 'Error saving note', true);
-    }
-};
 
 // Placeholder for functions that might have been removed or need re-evaluation
 // These are not directly related to the 'Access' button but were part of the removed block.
