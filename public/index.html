@@ -20,7 +20,7 @@
             <p class="access-subtitle">Enter an access code to manage your notes and files</p>
             <div class="input-group">
                 <input type="text" id="userIdInput" placeholder="Enter an access code">
-                <input type="text" id="privateCodeInput" placeholder="Enter private code (optional)">
+                <input type="text" id="privateCodeInput" placeholder="Enter padlock code (optional)">
             </div>
             <button class="primary-button" id="loginButton">Open</button>
             <p class="help-text">Use any code you want. Just remember it to access your notes later!</p>
@@ -49,7 +49,7 @@
                     <button class="primary-button" id="saveTextButton">Save Note</button>
                 </div>
                 <label for="saveNoteAsPrivate" style="margin-top: 10px; display: block;">
-                    <input type="checkbox" id="saveNoteAsPrivate"> Save as Private
+                    <input type="checkbox" id="saveNoteAsPrivate"> Save as Padlocked
                 </label>
                 <div id="notesContainer" class="file-list">
                     <!-- Notes will be displayed here -->
@@ -68,7 +68,7 @@
                     <span class="file-limits">Supported: PDF, DOC, PPT, Images (Max size: 10MB)</span>
                 </div>
                 <label for="saveAsPrivate" style="margin-top: 10px; display: block;">
-                    <input type="checkbox" id="saveAsPrivate"> Save files as Private
+                    <input type="checkbox" id="saveAsPrivate"> Save files as Padlocked
                 </label>
                 <div id="fileList" class="file-list">
                     <!-- Files will be listed here -->

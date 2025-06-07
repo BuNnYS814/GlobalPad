@@ -81,10 +81,10 @@ function displayFiles(files, hasPrivateCode = false) {
         fileElement.innerHTML = `
             <span class="filename">${file.filename}</span>
             <div class="button-group">
-                <button onclick="downloadFile('${file.fileId}', '${file.privateCode || ''}')" ${file.isLocked ? 'disabled' : ''} title="${file.isLocked ? 'Enter private code to download' : ''}">Download</button>
-                <button onclick="deleteFile('${file.fileId}', '${file.privateCode || ''}')" ${file.isLocked ? 'disabled' : ''} title="${file.isLocked ? 'Enter private code to delete' : ''}">Delete</button>
+                <button onclick="downloadFile('${file.fileId}', '${file.privateCode || ''}')" ${file.isLocked ? 'disabled' : ''} title="${file.isLocked ? 'Enter padlock code to download' : ''}">Download</button>
+                <button onclick="deleteFile('${file.fileId}', '${file.privateCode || ''}')" ${file.isLocked ? 'disabled' : ''} title="${file.isLocked ? 'Enter padlock code to delete' : ''}">Delete</button>
             </div>
-            ${file.isLocked ? '<div class="lock-overlay"><span class="lock-icon">🔒</span><p>Enter private code to access</p></div>' : ''}
+            ${file.isLocked ? '<div class="lock-overlay"><span class="lock-icon">🔒</span><p>Enter padlock code to access</p></div>' : ''}
         `;
 
         container.appendChild(fileElement);
@@ -176,7 +176,7 @@ document.getElementById('fileForm').onsubmit = async function(e) {
     
     const isPrivate = document.getElementById('saveAsPrivate').checked;
     if (isPrivate) {
-        const privateCode = prompt('Enter a private code for this file:');
+        const privateCode = prompt('Enter a padlock code for this file:');
         if (!privateCode) return;
         formData.append('isPrivate', 'true');
         formData.append('privateCode', privateCode);
@@ -218,7 +218,7 @@ document.getElementById('noteForm').onsubmit = async function(e) {
     let privateCode = '';
     
     if (isPrivate) {
-        privateCode = prompt('Enter a private code for this note:');
+        privateCode = prompt('Enter a padlock code for this note:');
         if (!privateCode) return;
     }
     
